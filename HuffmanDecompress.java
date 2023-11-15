@@ -101,9 +101,8 @@ public class HuffmanDecompress {
             }
          }
 
-         String currentChars = "";
+         String window = "";
 
-         long fileLength = new File(inFileName).length();
 
          while ((input.available() > 0) || (!inputPipe.isEmpty())) { // Loop until we have read all the bits from the
                                                                      // file and the pipe is empty
@@ -111,14 +110,14 @@ public class HuffmanDecompress {
                                                    // call fillQueu
                fillQueue(input, inputPipe);
 
-            currentChars += inputPipe.take();
+            window += inputPipe.take();
 
-            if (codeMap.containsKey(currentChars)) { // If the current string is a key in the map, write the value
+            if (codeMap.containsKey(window)) { // If the current string is a key in the map, write the value
 
-               int j = codeMap.get(currentChars);
+               int j = codeMap.get(window);
                fileOutput.write(j);
                md.update((byte) j);
-               currentChars = "";
+               window = "";
             }
 
             if (MessageDigest.isEqual(((MessageDigest) md.clone()).digest(), digest)) { // Compare currently
