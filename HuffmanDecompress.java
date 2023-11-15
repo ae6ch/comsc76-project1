@@ -135,7 +135,7 @@ public class HuffmanDecompress {
       // TODO: If we get to this point, the ran out of data to process, but the digest must not be correct and we should assume the file is corrupt and delete it, and/or return a failure
    }
 
-   public static String getBits(int c) {
+   public static String getBits(int c) { // This shouldn't be here, should be in a utility class
       StringBuilder output = new StringBuilder();
       for (int i = 7; i >= 0; i--) { // There is a static method in Integer that does almost the same thing, but it
          // "helpfully" removes leading zeros.
