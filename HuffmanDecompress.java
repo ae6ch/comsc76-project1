@@ -101,23 +101,24 @@ public class HuffmanDecompress {
             }
          }
 
-         String window = "";
-
+         String window = ""; // This really shouldn't be a string? Maybe a char array? Or a byte array?
+                             // Should change to a StringBuilder if going to leave it a string. Although i am
+                             // not sure how much it matters for the average code size
 
          while ((input.available() > 0) || (!inputPipe.isEmpty())) { // Loop until we have read all the bits from the
-                                                                     // file and the pipe is empty
+                                                                     // file AND the pipe is empty
             if (inputPipe.remainingCapacity() > 8) // Add more bits to the processing pipe, minium of 8 bytes needed to
-                                                   // call fillQueu
+                                                   // call fillQueue
                fillQueue(input, inputPipe);
 
-            window += inputPipe.take();
+            window += inputPipe.take(); // Keep adding bytes (really bits) to the window until we have a match
 
             if (codeMap.containsKey(window)) { // If the current string is a key in the map, write the value
 
                int j = codeMap.get(window);
-               fileOutput.write(j);
-               md.update((byte) j);
-               window = "";
+               fileOutput.write(j);  // Write the entry from the dictionary to the output file
+               md.update((byte) j); // Updating the running digest
+               window = "";  // Erase the window and start again
             }
 
             if (MessageDigest.isEqual(((MessageDigest) md.clone()).digest(), digest)) { // Compare currently
@@ -131,7 +132,7 @@ public class HuffmanDecompress {
          System.out.println(e.getMessage());
          System.exit(1);
       }
-
+      // TODO: If we get to this point, the ran out of data to process, but the digest must not be correct and we should assume the file is corrupt and delete it, and/or return a failure
    }
 
    public static String getBits(int c) {
