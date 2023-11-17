@@ -5,9 +5,12 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Implementation of Huffman decompression
@@ -37,7 +40,6 @@ public class HuffmanDecompress {
     * 
     * @return The digest of the file
     */
-
    public byte[] getDigest() {
       return digest;
    }
@@ -53,7 +55,8 @@ public class HuffmanDecompress {
 
    /**
     * Read the Huffman header from the file
-    *
+    * 
+    * 
     */
    private void readHuffHeader() {
       try {
@@ -90,11 +93,10 @@ public class HuffmanDecompress {
     * @throws IOException
     * @throws InterruptedException
     */
-   public void fillQueue(BufferedInputStream inputStream, BlockingQueue<Character> inputPipe)
+   private void fillQueue(BufferedInputStream inputStream, BlockingQueue<Character> inputPipe)
          throws IOException, InterruptedException {
-
-      while ((inputStream.available() > 0) && (inputPipe.remainingCapacity() > 8)) { // 8 bytes needed in the pipe per
-                                                                                     // byte read from file
+      // Loop and read all the bytes. 8 bytes free needed in the pipe per read
+      while ((inputStream.available() > 0) && (inputPipe.remainingCapacity() > 8)) {
          for (char c : getBits(inputStream.read()).toCharArray()) {
             inputPipe.put(c);
          }
@@ -105,39 +107,31 @@ public class HuffmanDecompress {
    /**
     * Decompress the file and write it to the output file
     * 
+    * @return True if the file was successfully decompressed, false otherwise
     */
    public boolean write() {
       try (FileOutputStream fileOutput = new FileOutputStream(outFileName)) {
          BlockingQueue<Character> inputPipe = new LinkedBlockingQueue<>(MAX_INPUT_BUFFER);
 
-         HashMap<String, Integer> codeMap = new HashMap<>(); // Create a map of codes to characters
-         for (int j = 0; j < SIZE; j++) {
-            if (codeChar[j] != null) {
-               codeMap.put(codeChar[j], j);
-            }
-         }
+         Map<String, Integer> codeMap = IntStream.range(0, SIZE) // Working with a map is easier then the array
+               .filter(j -> codeChar[j] != null)
+               .boxed()
+               .collect(Collectors.toMap(j -> codeChar[j], Function.identity()));
 
          String window = "";
-
-         while ((input.available() > 0) || (!inputPipe.isEmpty())) { // Loop until we have read all the bits from the
-                                                                     // file and the pipe is empty
-            if (inputPipe.remainingCapacity() > 8) // Add more bits to the processing pipe, minium of 8 bytes needed to
-                                                   // call fillQueu
+         // Loop until we have read all the bits from the file and the pipe is empty
+         while ((input.available() > 0) || (!inputPipe.isEmpty())) {
+            if (inputPipe.remainingCapacity() > 8) // Add more bits to the processing pipe, min of 8 bytes needed
                fillQueue(input, inputPipe);
-
             window += inputPipe.take();
-
             if (codeMap.containsKey(window)) { // If the current string is a key in the map, write the value
-
                int j = codeMap.get(window);
                fileOutput.write(j);
                md.update((byte) j);
                window = "";
             }
-
-            if (MessageDigest.isEqual(((MessageDigest) md.clone()).digest(), digest)) { // Compare currently
-                                                                                        // calculated digest to the
-                                                                                        // one read from the file
+            // Compare currently calculated digest to the one read from the file
+            if (MessageDigest.isEqual(((MessageDigest) md.clone()).digest(), digest)) {
                return true;
             }
          }
@@ -148,13 +142,21 @@ public class HuffmanDecompress {
       return false;
    }
 
-   public static String getBits(int c) {
+   /**
+    * Convert a int to a string of bits
+    * 
+    * @param c
+    * @return The string of bits
+    */
+   private static String getBits(int c) {
+      /*
+       * There is a static method in Integer that does almost the same thing, but it
+       * "helpfully" removes leading zeros.
+       */
       StringBuilder output = new StringBuilder();
-      for (int i = 7; i >= 0; i--) { // There is a static method in Integer that does almost the same thing, but it
-         // "helpfully" removes leading zeros.
+      for (int i = 7; i >= 0; i--) {
          output.append((c >> i) & 1);
       }
       return output.toString();
-
    }
 }
