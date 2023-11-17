@@ -90,13 +90,15 @@ public class HuffmanCompress {
         ObjectOutputStream objOut = new ObjectOutputStream(fileOutput);
         BitOutputStream bitOut = new BitOutputStream(fileOutput);
         BufferedInputStream input = new BufferedInputStream(new FileInputStream(inFileName))) {
+          // Write the header to the compressed file
+          // Header contains the hash algorithm, the digest, and the codes
       HuffmanHeader header = new HuffmanHeader(hashAlgorithm, digest, codes);
       objOut.writeObject(header);
 
+      // Write the compressed file by reading from the file 1 byte at a time and looking up the code for each byte and writing it to the compressed file
       while (input.available() > 0) {
         int r = input.read();
         bitOut.writeBit(codes[r]);
-
       }
     } catch (IOException e) {
       System.out.println(e.getMessage());
@@ -113,7 +115,7 @@ public class HuffmanCompress {
    * @param root The root of the Huffman tree
    * @return The array of Huffman codes
    */
-  public static String[] getCode(Node root) {
+  private static String[] getCode(Node root) {
     if (root == null)
       return null;
     String[] codes = new String[SIZE];
@@ -126,7 +128,6 @@ public class HuffmanCompress {
    * 
    * @param root  The root of the Huffman tree
    * @param codes The array for storing codes
-   * 
    */
   private static void assignCode(Node root, String[] codes) {
     if (root.left != null) {
@@ -146,7 +147,7 @@ public class HuffmanCompress {
    * @param counts The array that contains the character frequencies
    * @return The Huffman tree
    */
-  public static Tree getHuffmanTree(int[] counts) {
+  private static Tree getHuffmanTree(int[] counts) {
     // Create a heap to hold trees
     Heap<Tree> heap = new Heap<>(); // Defined in Listing 24.10
     for (int i = 0; i < counts.length; i++) {
@@ -169,7 +170,7 @@ public class HuffmanCompress {
    * @param inFileName The name of the input file
    * @return The array of frequencies
    */
-  public int[] getCharacterFrequency(String inFileName) {
+  private int[] getCharacterFrequency(String inFileName) {
     int[] counts = new int[SIZE];
     long fileSize = new File(inFileName).length();
     try (BufferedInputStream input = new BufferedInputStream(new FileInputStream(inFileName))) {
