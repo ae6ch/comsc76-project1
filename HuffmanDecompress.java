@@ -1,10 +1,8 @@
 import java.io.BufferedInputStream;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
@@ -35,6 +33,25 @@ public class HuffmanDecompress {
    }
 
    /**
+    * Get the digest of the file
+    * 
+    * @return The digest of the file
+    */
+
+   public byte[] getDigest() {
+      return digest;
+   }
+
+   /**
+    * Get the hash algorithm used to create the digest
+    * 
+    * @return The hash algorithm
+    */
+   public String getHashAlgorithm() {
+      return md.getAlgorithm();
+   }
+
+   /**
     * Read the Huffman header from the file
     *
     */
@@ -44,8 +61,7 @@ public class HuffmanDecompress {
          HuffmanHeader header = (HuffmanHeader) objIn.readObject();
          codeChar = header.codes;
          digest = header.digest;
-         System.out.printf("Digest algorithm: %s\n", header.digestAlgorithm);
-         System.out.println("Digest: " + String.format("%02X", new BigInteger(1, digest)));
+
          md = MessageDigest.getInstance(header.digestAlgorithm);
 
       } catch (ClassNotFoundException | IOException | NoSuchAlgorithmException e) {
@@ -90,7 +106,7 @@ public class HuffmanDecompress {
     * Decompress the file and write it to the output file
     * 
     */
-   public void write() { // TODO: return a boolean to indicate success or failure
+   public boolean write() {
       try (FileOutputStream fileOutput = new FileOutputStream(outFileName)) {
          BlockingQueue<Character> inputPipe = new LinkedBlockingQueue<>(MAX_INPUT_BUFFER);
 
@@ -101,41 +117,38 @@ public class HuffmanDecompress {
             }
          }
 
-         String window = ""; // This really shouldn't be a string? Maybe a char array? Or a byte array?
-                             // Should change to a StringBuilder if going to leave it a string. Although i am
-                             // not sure how much it matters for the average code size
+         String window = "";
 
          while ((input.available() > 0) || (!inputPipe.isEmpty())) { // Loop until we have read all the bits from the
-                                                                     // file AND the pipe is empty
+                                                                     // file and the pipe is empty
             if (inputPipe.remainingCapacity() > 8) // Add more bits to the processing pipe, minium of 8 bytes needed to
-                                                   // call fillQueue
+                                                   // call fillQueu
                fillQueue(input, inputPipe);
 
-            window += inputPipe.take(); // Keep adding bytes (really bits) to the window until we have a match
+            window += inputPipe.take();
 
             if (codeMap.containsKey(window)) { // If the current string is a key in the map, write the value
 
                int j = codeMap.get(window);
-               fileOutput.write(j);  // Write the entry from the dictionary to the output file
-               md.update((byte) j); // Updating the running digest
-               window = "";  // Erase the window and start again
+               fileOutput.write(j);
+               md.update((byte) j);
+               window = "";
             }
 
             if (MessageDigest.isEqual(((MessageDigest) md.clone()).digest(), digest)) { // Compare currently
                                                                                         // calculated digest to the
                                                                                         // one read from the file
-               System.out.println("\nFile successfully decompressed");
-               return;
+               return true;
             }
          }
       } catch (Exception e) { // TODO catch specific exceptions
          System.out.println(e.getMessage());
          System.exit(1);
       }
-      // TODO: If we get to this point, the ran out of data to process, but the digest must not be correct and we should assume the file is corrupt and delete it, and/or return a failure
+      return false;
    }
 
-   public static String getBits(int c) { // This shouldn't be here, should be in a utility class
+   public static String getBits(int c) {
       StringBuilder output = new StringBuilder();
       for (int i = 7; i >= 0; i--) { // There is a static method in Integer that does almost the same thing, but it
          // "helpfully" removes leading zeros.
