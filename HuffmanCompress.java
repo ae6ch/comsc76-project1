@@ -15,9 +15,7 @@ import java.io.File;
  * code in the textbook.
  * A Huffman tree is built from the file, and the codes are written to the
  * compressed file along with a MessageDigest of the uncompressed file.
- * The MessageDigest is a check against corrupt files, and it also solves the
- * problem of 0's stuffed at the end of the file matching the Huffman code for
- * 0.
+ * The MessageDigest is a check against corrupt files.
  * 
  */
 public class HuffmanCompress {
@@ -30,6 +28,8 @@ public class HuffmanCompress {
   long uncompressedSize;
   String hashAlgorithm;
   MessageDigest md = null;
+  long bytesRead = 0L; // Number of bytes read from the file as its compressed. Used to calculate
+  // compression ratio and provide progress during background compression.
 
   byte[] digest = null; // The digest of the file, populated by getCharacterFrequency
 
@@ -43,9 +43,8 @@ public class HuffmanCompress {
 
     this.inFileName = inFileName;
     this.outFileName = outFileName;
-    this.hashAlgorithm = hashAlgorithm;
     try {
-      md = MessageDigest.getInstance(hashAlgorithm);
+      setHashAlgorithm(hashAlgorithm);
     } catch (NoSuchAlgorithmException e) {
       System.out.println(e.getMessage());
       System.exit(1);
@@ -54,10 +53,72 @@ public class HuffmanCompress {
   }
 
   /**
-   * Print Huffman codes for characters
+   * Set/Change the hash algorithm
    * 
+   * @return true if the hash algorithm is valid, false otherwise
    */
-  public void printCodes() {
+  public void setHashAlgorithm(String hashAlgorithm) throws NoSuchAlgorithmException {
+    md = MessageDigest.getInstance(hashAlgorithm);
+    this.hashAlgorithm = hashAlgorithm;
+  }
+
+  /**
+   * Return the hash algorithm
+   * 
+   * @return The hash algorithm
+   */
+  public String getHashAlgorithm() {
+    return hashAlgorithm;
+  }
+
+  /**
+   * Return the inFile name
+   * 
+   * @return The inFile name
+   */
+  public String getInFileName() {
+    return inFileName;
+  }
+
+  /**
+   * Return the outFile name
+   */
+  public String getOutFileName() {
+    return outFileName;
+  }
+
+  /**
+   * Return huffman codes for characters
+   * 
+   * @return The array of codes
+   */
+  public String[] getCodes() {
+    return codes;
+  }
+
+  /**
+   * Return the frequency of characters
+   * 
+   * @return The array of frequencies
+   */
+  public int[] getCodeCounts() {
+    return codeCounts;
+  }
+
+  /**
+   * Get the size of the uncompressed file
+   */
+  public long getUncompressedSize() {
+    return uncompressedSize;
+  }
+
+  /**
+   * Print Huffman codes for characters (static)
+   * 
+   * @param codes      The array of codes
+   * @param codeCounts The array of frequencies
+   */
+  public static void printCodes(String[] codes, int[] codeCounts) {
     System.out.printf("%-15s%-15s%-15s%-15s\n", "ASCII Code", "Character", "Frequency", "Code");
 
     for (int i = 0; i < codes.length; i++)
@@ -65,6 +126,13 @@ public class HuffmanCompress {
         System.out.printf("%-15d%-15s%-15d%-15s\n",
             i, (char) i + "", codeCounts[i], codes[i]);
 
+  }
+
+  /**
+   * Print Huffman codes for characters (instance)
+   */
+  public void printCodes() {
+    printCodes(codes, codeCounts);
   }
 
   /**
@@ -80,6 +148,21 @@ public class HuffmanCompress {
   }
 
   /**
+   * Write the uncompressed file as a background thread
+   * 
+   * This can be used to background the compression process, while other things are going on (e.g. a GUI)
+   */
+  public void writeCompressedThread() {
+    Thread thread = new Thread(this::writeCompressed);
+    thread.start();
+    /* 
+    while (thread.isAlive()) { // Print progress while the thread is alive
+      System.out.printf("\rCompressing... %d%%", (int) (bytesRead * 100 / uncompressedSize));
+    }
+    */
+}
+
+  /**
    * Write the compressed file
    * 
    * Reads the file again, and writes the compressed file
@@ -90,14 +173,16 @@ public class HuffmanCompress {
         ObjectOutputStream objOut = new ObjectOutputStream(fileOutput);
         BitOutputStream bitOut = new BitOutputStream(fileOutput);
         BufferedInputStream input = new BufferedInputStream(new FileInputStream(inFileName))) {
-          // Write the header to the compressed file
-          // Header contains the hash algorithm, the digest, and the codes
+      // Write the header to the compressed file
+      // Header contains the hash algorithm, the digest, and the codes
       HuffmanHeader header = new HuffmanHeader(hashAlgorithm, digest, codes);
       objOut.writeObject(header);
 
-      // Write the compressed file by reading from the file 1 byte at a time and looking up the code for each byte and writing it to the compressed file
+      // Write the compressed file by reading from the file 1 byte at a time and
+      // looking up the code for each byte and writing it to the compressed file
       while (input.available() > 0) {
         int r = input.read();
+        bytesRead++;
         bitOut.writeBit(codes[r]);
       }
     } catch (IOException e) {

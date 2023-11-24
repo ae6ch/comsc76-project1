@@ -52,7 +52,9 @@ import java.util.Enumeration;
     } 
 
     HuffmanCompress h = new HuffmanCompress(args[0], args[1],hashAlgorithm);
-    h.writeCompressed();
+    h.writeCompressedThread();
+
+
    }
 
    /**
