@@ -148,7 +148,7 @@ public class HuffmanCompress {
   }
 
   /**
-   * Write the uncompressed file as a background thread
+   * Wrapper for writeCompressed() to compressed file as a background thread
    * 
    * This can be used to background the compression process, while other things are going on (e.g. a GUI)
    */
