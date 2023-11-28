@@ -1,0 +1,94 @@
+@startuml
+class BitOutputStream {
+    byteBuffer
+    bytePosition
+    output
+    close()
+    flush()
+    writeBit()
+}
+class Compress_a_file {
+    algorithm
+    hashAlgorithm
+    inFile
+    outFile
+    getHashAlgorithms()
+    main()
+}
+class Heap {
+    currentIndex
+    leftChildIndex
+    list
+    maxIndex
+    parentIndex
+    removedObject
+    rightChildIndex
+    add()
+    getSize()
+    isEmpty()
+    remove()
+}
+class HuffmanCompress {
+    SIZE
+    bytesRead
+    codeCounts
+    codes
+    counts
+    digest
+    fileSize
+    hashAlgorithm
+    header
+    heap
+    i
+    inFileName
+    md
+    outFileName
+    r
+    t1
+    t2
+    thread
+    tree
+    uncompressedSize
+    assignCode()
+    encode()
+    getCharacterFrequency()
+    getCode()
+    getCodeCounts()
+    getCodes()
+    getHashAlgorithm()
+    getHuffmanTree()
+    getInFileName()
+    getOutFileName()
+    getUncompressedSize()
+    printCodes()
+    printCodes()
+    setHashAlgorithm()
+    writeCompressed()
+    writeCompressedThread()
+}
+class HuffmanHeader {
+    codes
+    digest
+    digestAlgorithm
+}
+class Node {
+    code
+    element
+    left
+    right
+    weight
+}
+class Tree {
+    root
+    compareTo()
+}
+
+Compress_a_file *--> HuffmanCompress : h
+HuffmanCompress *--> HuffmanHeader : header
+HuffmanCompress *--> Heap : heap
+HuffmanCompress *--> Tree
+HuffmanCompress *--> BitOutputStream
+HuffmanCompress *---> Node
+Tree <--> Node
+hide empty members
+@enduml
