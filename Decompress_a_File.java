@@ -1,7 +1,7 @@
 import java.io.File;
 import java.math.BigInteger;
 
-public class Decompress_a_file {
+public class Decompress_a_File {
 
    public static void main(String[] args) {
       if ((args.length != 2)) {
