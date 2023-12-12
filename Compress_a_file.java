@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 
 
-  public class Compress_a_file {
+  public class Compress_a_File {
   public static void main(String[] args) {
     String hashAlgorithm = "SHA-256";
     if ((args.length != 2) && (args.length != 3)) {
