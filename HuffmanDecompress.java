@@ -13,8 +13,9 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * Implementation of Huffman decompression
- * 
+ * Decompress_a_File
+ * COMSC76 Team 1
+ * 11/29/23
  */
 public class HuffmanDecompress {
    private static final int SIZE = 256; // Number of characters in the ASCII set
@@ -144,7 +145,9 @@ public class HuffmanDecompress {
 
    /**
     * Convert a int to a string of bits
-    * 
+    * 123 becomes "01111011"
+    * 255 becomes "11111111"
+    *
     * @param c
     * @return The string of bits
     */

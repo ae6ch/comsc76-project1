@@ -5,6 +5,10 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.math.BigInteger;
 import java.io.File;
 
@@ -140,12 +144,21 @@ public class HuffmanCompress {
    * 
    * Reads the file, creates the Huffman tree, and gets the codes
    */
-  private void encode() {
-    codeCounts = getCharacterFrequency(inFileName); // Count frequency
-    tree = getHuffmanTree(codeCounts); // Create a Huffman tree
-    codes = getCode(tree.root); // Get codes
+ private void encode() {
+        // Start a thread to get character frequency concurrently
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        Future<int[]> frequencyFuture = executor.submit(() -> getCharacterFrequency(inFileName));
 
-  }
+        try {
+            codeCounts = frequencyFuture.get(); // Wait for the frequency calculation to complete
+            executor.shutdown(); // Shutdown the executor service
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        }
+
+        tree = getHuffmanTree(codeCounts); // Create a Huffman tree
+        codes = getCode(tree.root); // Get codes
+    }
 
   /**
    * Wrapper for writeCompressed() to compressed file as a background thread
@@ -255,30 +268,31 @@ public class HuffmanCompress {
    * @param inFileName The name of the input file
    * @return The array of frequencies
    */
-  private int[] getCharacterFrequency(String inFileName) {
-    int[] counts = new int[SIZE];
-    long fileSize = new File(inFileName).length();
-    try (BufferedInputStream input = new BufferedInputStream(new FileInputStream(inFileName))) {
-      while (input.available() > 0) {
-        int r = input.read();
-        counts[r]++; // Read byte and increase count
-        uncompressedSize++; // Count the size of the uncompressed file as we read
-        md.update((byte) r); // Update the digest
-      }
-    } catch (IOException ex) {
-      ex.printStackTrace();
+   private int[] getCharacterFrequency(String inFileName) {
+        int[] counts = new int[SIZE];
+        long fileSize = new File(inFileName).length();
+        try (BufferedInputStream input = new BufferedInputStream(new FileInputStream(inFileName))) {
+            while (input.available() > 0) {
+                int r = input.read();
+                counts[r]++; // Read byte and increase count
+                uncompressedSize++; // Count the size of the uncompressed file as we read
+                md.update((byte) r); // Update the digest
+            }
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+
+        System.out.printf("\nUncompressed size: %d\n", uncompressedSize);
+
+        if (md != null) {
+            digest = md.digest();
+        } else {
+            System.out.println("Message digest is null");
+            System.exit(1);
+        }
+        System.out.println(hashAlgorithm + " Digest: " + String.format("%02X", new BigInteger(1, digest)));
+
+        return counts;
     }
 
-    System.out.printf("\nUncompressed size: %d\n", uncompressedSize);
-
-    if (md != null) {
-      digest = md.digest();
-    } else {
-      System.out.println("Message digest is null");
-      System.exit(1);
-    }
-    System.out.println(hashAlgorithm + " Digest: " + String.format("%02X", new BigInteger(1, digest)));
-
-    return counts;
-  }
 }

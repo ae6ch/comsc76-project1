@@ -89,6 +89,7 @@ HuffmanCompress *--> Heap : heap
 HuffmanCompress *--> Tree
 HuffmanCompress *--> BitOutputStream
 HuffmanCompress *---> Node
+HuffmanCompress *--> MessageDigest
 Tree <--> Node
 hide empty members
 @enduml
