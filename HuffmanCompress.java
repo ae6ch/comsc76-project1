@@ -1,3 +1,5 @@
+package HuffmanProject;
+
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -11,6 +13,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.math.BigInteger;
 import java.io.File;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Implementation of Huffman compression
@@ -23,6 +27,9 @@ import java.io.File;
  * 
  */
 public class HuffmanCompress {
+  // Logger for the class
+  private static final Logger logger = Logger.getLogger(HuffmanCompress.class.getName());
+
   private static final int SIZE = 256;
   Tree tree;
   String[] codes;
@@ -123,12 +130,13 @@ public class HuffmanCompress {
    * @param codeCounts The array of frequencies
    */
   public static void printCodes(String[] codes, int[] codeCounts) {
-    System.out.printf("%-15s%-15s%-15s%-15s\n", "ASCII Code", "Character", "Frequency", "Code");
+    logger.log(Level.INFO, "{0,-15} {1,-15} {2,-15} {3,-15}",
+        new Object[] { "ASCII Code", "Character", "Frequency", "Code" });
 
     for (int i = 0; i < codes.length; i++)
       if (codeCounts[i] != 0) // (char)i is not in text if counts[i] is 0
-        System.out.printf("%-15d%-15s%-15d%-15s\n",
-            i, (char) i + "", codeCounts[i], codes[i]);
+        logger.log(Level.INFO, "{0,-15} {1,-15} {2,-15} {3,-15}",
+            new Object[] { i, (char) i + "", codeCounts[i], codes[i] });
 
   }
 
@@ -144,36 +152,46 @@ public class HuffmanCompress {
    * 
    * Reads the file, creates the Huffman tree, and gets the codes
    */
- private void encode() {
-        // Start a thread to get character frequency concurrently
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        Future<int[]> frequencyFuture = executor.submit(() -> getCharacterFrequency(inFileName));
+  private void encode() {
+    // Start a thread to get character frequency concurrently
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    Future<int[]> frequencyFuture = executor.submit(() -> getCharacterFrequency(inFileName));
 
-        try {
-            codeCounts = frequencyFuture.get(); // Wait for the frequency calculation to complete
-            executor.shutdown(); // Shutdown the executor service
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
-        }
-
-        tree = getHuffmanTree(codeCounts); // Create a Huffman tree
-        codes = getCode(tree.root); // Get codes
+    try {
+      codeCounts = frequencyFuture.get(); // Wait for the frequency calculation to complete
+      executor.shutdown(); // Shutdown the executor service
+    } catch (InterruptedException | ExecutionException e) {
+      logger.logp(Level.SEVERE, HuffmanCompress.class.getName(), "encode", "Error encoding the file", e);
     }
+
+    tree = getHuffmanTree(codeCounts); // Create a Huffman tree
+    codes = getCode(tree.root); // Get codes
+  }
 
   /**
    * Wrapper for writeCompressed() to compressed file as a background thread
    * 
-   * This can be used to background the compression process, while other things are going on (e.g. a GUI)
+   * This can be used to background the compression process, while other things
+   * are going on (e.g. a GUI)
    */
   public void writeCompressedThread() {
     Thread thread = new Thread(this::writeCompressed);
     thread.start();
-    /* 
-    while (thread.isAlive()) { // Print progress while the thread is alive
-      System.out.printf("\rCompressing... %d%%", (int) (bytesRead * 100 / uncompressedSize));
+    /*
+     * while (thread.isAlive()) { // Print progress while the thread is alive
+     * System.out.printf("\rCompressing... %d%%", (int) (bytesRead * 100 /
+     * uncompressedSize));
+     * }
+     */
+    // Wait for the compression thread to complete
+    try {
+      thread.join();
+    } catch (InterruptedException e) {
+      // Handle the exception
+      logger.logp(Level.SEVERE, HuffmanCompress.class.getName(), "writeCompressedThread",
+          "Error waiting for compression thread to complete", e);
     }
-    */
-}
+  }
 
   /**
    * Write the compressed file
@@ -199,9 +217,7 @@ public class HuffmanCompress {
         bitOut.writeBit(codes[r]);
       }
     } catch (IOException e) {
-      System.out.println(e.getMessage());
-      System.exit(1);
-
+      handleIOException(e);
     }
   }
 
@@ -268,31 +284,38 @@ public class HuffmanCompress {
    * @param inFileName The name of the input file
    * @return The array of frequencies
    */
-   private int[] getCharacterFrequency(String inFileName) {
-        int[] counts = new int[SIZE];
-        long fileSize = new File(inFileName).length();
-        try (BufferedInputStream input = new BufferedInputStream(new FileInputStream(inFileName))) {
-            while (input.available() > 0) {
-                int r = input.read();
-                counts[r]++; // Read byte and increase count
-                uncompressedSize++; // Count the size of the uncompressed file as we read
-                md.update((byte) r); // Update the digest
-            }
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-
-        System.out.printf("\nUncompressed size: %d\n", uncompressedSize);
-
-        if (md != null) {
-            digest = md.digest();
-        } else {
-            System.out.println("Message digest is null");
-            System.exit(1);
-        }
-        System.out.println(hashAlgorithm + " Digest: " + String.format("%02X", new BigInteger(1, digest)));
-
-        return counts;
+  private int[] getCharacterFrequency(String inFileName) {
+    int[] counts = new int[SIZE];
+    long fileSize = new File(inFileName).length();
+    try (BufferedInputStream input = new BufferedInputStream(new FileInputStream(inFileName))) {
+      while (input.available() > 0) {
+        int r = input.read();
+        counts[r]++; // Read byte and increase count
+        uncompressedSize++; // Count the size of the uncompressed file as we read
+        md.update((byte) r); // Update the digest
+      }
+    } catch (IOException ex) {
+      handleIOException(ex);
     }
 
+    System.out.printf("\nUncompressed size: %d\n", uncompressedSize);
+
+    if (md != null) {
+      digest = md.digest();
+    } else {
+      logger.logp(Level.SEVERE, HuffmanCompress.class.getName(), "getCharacterFrequency",
+          "Message digest is null");
+      System.exit(1);
+    }
+    System.out.println(hashAlgorithm + " Digest: " + String.format("%02X", new BigInteger(1, digest)));
+
+    return counts;
+  }
+
+  // Helper method for handling IOException
+  private void handleIOException(IOException e) {
+    logger.logp(Level.SEVERE, HuffmanCompress.class.getName(), "handleIOException", "IOException: " + e.getMessage(),
+        e);
+    System.exit(1);
+  }
 }
