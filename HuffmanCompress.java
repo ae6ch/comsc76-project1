@@ -1,3 +1,5 @@
+package HuffmanProject;
+
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -55,7 +57,7 @@ public class HuffmanCompress {
     try {
       setHashAlgorithm(hashAlgorithm);
     } catch (NoSuchAlgorithmException e) {
-      System.out.println(e.getMessage());
+      logger.log(Level.INFO, e.getMessage());
       System.exit(1);
     }
     encode(); // build the Huffman tree and get the codes
@@ -296,7 +298,7 @@ public class HuffmanCompress {
       handleIOException(ex);
     }
 
-    System.out.printf("\nUncompressed size: %d\n", uncompressedSize);
+    logger.log(Level.INFO, "\nUncompressed size: " + uncompressedSize + "\n");
 
     if (md != null) {
       digest = md.digest();
@@ -305,7 +307,7 @@ public class HuffmanCompress {
           "Message digest is null");
       System.exit(1);
     }
-    System.out.println(hashAlgorithm + " Digest: " + String.format("%02X", new BigInteger(1, digest)));
+    logger.log(Level.INFO, hashAlgorithm + " Digest: " + String.format("%02X", new BigInteger(1, digest)));
 
     return counts;
   }
